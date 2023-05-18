@@ -70,14 +70,35 @@ io.on("connection", (socket) => {
   });
 
   // more advanced version of start game with lobbies and IDs, still WIP
-  // socket.on("startGame1", (playerId) => {
-  //   console.log("got a request to start game from " + playerId);
-  //   var gameId = Date.now();
-  //   socket.join(gameId);
-  //   rooms[gameId] = "New game";
-  //   console.log(rooms);
-  //   socket.emit("startGame2", JSON.parse(`{"newGameId" : "` + gameId + `"}`));
-  // });
+  socket.on("createGame1", (playerId) => {
+    console.log("got a request to create game from " + playerId);
+    var gameId = Date.now();
+    socket.join(gameId);
+    rooms[gameId] = "New game";
+    console.log(rooms);
+    socket.emit("createGame2", JSON.parse(`{"newGameId" : "` + gameId + `"}`));
+  });
+
+  socket.on("startGame1", (playerId) => {
+    console.log("got a request to start game from " + playerId);
+    player = new Player();
+    grid = new Grid(player);
+
+    //start the game
+    function updateGame() {
+        grid.updateGame();
+    }
+    setInterval(updateGame, 1000);
+
+    //send the grid to the front for display
+    function sendGameData() {
+      socket.emit("gameData", JSON.stringify(grid.getJsonGrid()));
+    }
+    setInterval(sendGameData, 100);
+    socket.emit("createGame2", JSON.parse(`{"newGameId" : "` + gameId + `"}`));
+  });
+
+
   socket.on("keydown", (key) => {
     console.log(key);
         if(key == "q") grid.rotatePiece(-1);
@@ -89,6 +110,7 @@ io.on("connection", (socket) => {
         grid.printGrid();
   });
   socket.on("disconnect", (e) => {
+    // clean client from id
     console.log(e);
     console.log("Client disconnected");
   });

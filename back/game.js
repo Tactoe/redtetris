@@ -27,7 +27,7 @@ var shapes = {
     "I": [
         [0, 0, 0],
         [1, 1, 1],
-        [0, 0, 1]
+        [0, 0, 0]
     ],
     "L": [
         [0, 1, 0],
@@ -50,9 +50,9 @@ var shapes = {
         [0, 0, 0]
     ],
     "O": [
-        [1, 1, 1],
-        [1, 1, 1],
-        [1, 1, 1]
+        [0, 1, 1],
+        [0, 1, 1],
+        [0, 0, 0]
     ],
     "T": [
         [0, 1, 0],
@@ -89,26 +89,50 @@ function Piece(type, startingX) {
 function Player()
 {
     this.score = 0;
-    this.hasMalus = false;
-    this.setMalus = (b) =>
+    this.malusLines = 0;
+    this.name = "random";
+    this.setMalus = (lines) =>
     {
-        this.hasMalus = b; 
+        this.malusLines += lines; 
     }
+    this.id = 0;
 }
 
 function Game()
 {
     this.playerCount = 0;
+    this.tetrominoSequence = Array(5000).fill().map(() => tetrominoes[Math.floor(Math.random() * tetrominoes.length)])
+    this.players = [];
+    this.status = [
+        "pending", // when player are in the lobby waiting for player 1 to start
+        "ongoing" // when the game has started
+        ];
+    this.addPlayer = () => 
+    {
+        var newPlayer = new Player();
+        this.players.append(new Player());
+    }
+    this.sendMalusToOthers = (mainPlayerId, malus) =>
+    {
+        players.forEach(player => {
+            if (player.id !== mainPlayerId)
+                player.setMalus(malus)
+
+        });
+    }
     this.id = totalGames + 1;
 }
 
 
 
-function Grid(player) {
+function Grid(player, game) {
     this.width = 10;
     this.height = 20;
     this.player = player;
-    this.currentPiece = new Piece("L", Math.round(this.width / 2));
+    this.game = game;
+    this.tetrominoSequence = game.tetrominoSequence;
+    this.tetrominoIndex = 0;
+    this.currentPiece = new Piece(this.tetrominoSequence[0], Math.round(this.width / 2) - 1);
     this.grid = Array(this.height).fill().map(() => Array(this.width).fill().map(() => "X"));
     this.movePieceHorizontally = (direction) =>
     {
@@ -122,6 +146,7 @@ function Grid(player) {
     }
     this.checkForFullLine = () =>
     {
+        var enemyMalus = -1;
         for (var y = this.height - 1; y >= 0; y--)
         {
             var lineIsFull = true;
@@ -134,9 +159,10 @@ function Grid(player) {
                 }
             }
 
-            // move all upper row
+            // move all upper row down since the line is erased
             if (lineIsFull)
             {
+                enemyMalus++;
                 var previousRow = Array.from(this.grid[0]);
                 for (var y2 = 1; y2 <= y; y2++)
                 {
@@ -144,6 +170,11 @@ function Grid(player) {
                     this.grid[y2] = previousRow;
                     previousRow = Array.from(tmp);
                 }
+            }
+
+            if (enemyMalus > 0)
+            {
+                this.game.sendMalusToOthers(this.player.id, enemyMalus);
             }
         }
     }
@@ -161,13 +192,13 @@ function Grid(player) {
 
         this.checkForFullLine();
 
-        if (this.player.hasMalus)
+        if (this.player.malusLines > 0)
         {
-            this.addPlayerMalus();
-            this.player.setMalus(false);
+            this.addPlayerMalus(this.player.malusLines);
         }
-        // pick a shape at random
-        this.currentPiece = new Piece(tetrominoes[Math.floor(Math.random() * tetrominoes.length)], Math.round(this.width / 2) - 1);
+        // take the next tetromino in sequence, if reached the end loop back
+        this.tetrominoIndex = this.tetrominoIndex + 1 >= this.tetrominoSequence.length ? 0 : this.tetrominoIndex + 1;
+        this.currentPiece = new Piece(this.tetrominoSequence[this.tetrominoIndex], Math.round(this.width / 2) - 1);
         // If there is not enough room for the newly generated piece, trigger game over
         if (this.checkForCollision())
         {
@@ -176,8 +207,6 @@ function Grid(player) {
         this.printGrid();
     }
     this.slamPiece = () => {
-        var y = this.currentPiece.y;
-        var x = this.currentPiece.x;
         while (!this.checkForCollision())
             this.currentPiece.y += 1;
         this.currentPiece.y -= 1;
@@ -203,21 +232,29 @@ function Grid(player) {
     {
         process.exit(0);
     }
-    this.addPlayerMalus = () =>
+    this.addPlayerMalus = (linesToAdd) =>
     {
-        // if the top row is not empty, end the game immediately since it will be pushed beyond the limit
-        if (this.grid[0] != Array(this.width).fill().map(() => "X"))
-            this.gameOver();
-        // move all rows up one rank then insert the null row
-        var previousRow = Array.from(this.grid[this.height - 1]);
-        for (var y = this.height - 2; y >= 0; y--)
+        while (linesToAdd > 0)
         {
-            var tmp = Array.from(this.grid[y]);
-            this.grid[y] = previousRow;
-            previousRow = Array.from(tmp);
-        }
+            // if the top row is not empty, end the game immediately since it will be pushed beyond the limit
+            if (this.grid[0] != Array(this.width).fill().map(() => "X"))
+            {
+                this.gameOver();
+                break;
+            }
+            // move all rows up one rank then insert the null row
+            var previousRow = Array.from(this.grid[this.height - 1]);
+            for (var y = this.height - 2; y >= 0; y--)
+            {
+                var tmp = Array.from(this.grid[y]);
+                this.grid[y] = previousRow;
+                previousRow = Array.from(tmp);
+            }
 
-        this.grid[this.height - 1] = Array(this.width).fill().map(() => "N"); 
+            this.grid[this.height - 1] = Array(this.width).fill().map(() => "N"); 
+            linesToAdd--;
+        }
+        this.player.setMalus(0);
     }
     this.printGrid = () =>
     {
