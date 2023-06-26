@@ -24,6 +24,16 @@ export function Home() {
 					</Link>
 				</div>
 				<div className="Home-Button">
+					<Link to={"/Functional"}>
+						<PurpleColoredButton
+							variant="contained"
+							disableRipple
+						>
+							Demo
+						</PurpleColoredButton>
+					</Link>
+				</div>
+				<div className="Home-Button">
 					<Link to={"/Ranking"}>
 						<OrangeColoredButton
 							variant="contained"

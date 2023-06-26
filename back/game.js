@@ -201,6 +201,8 @@ function Grid(player) {
     }
     this.gameOver = () =>
     {
+        console.log('\033[2J');
+        console.log(JSON.stringify(this.grid));
         process.exit(0);
     }
     this.addPlayerMalus = () =>
@@ -255,16 +257,16 @@ function Grid(player) {
                     displayGrid[p.y + y][p.x + x] = p.type;
             }
         }
-        var ret = "";
-        for (var y = 0; y < this.height; y++)
-        {
-            for (var x = 0; x < this.width; x++)
-            {
-                    ret += ("" + displayGrid[y][x]);
-            }
-            ret += " ";
-        }
-        return (ret);
+        // var ret = "";
+        // for (var y = 0; y < this.height; y++)
+        // {
+        //     for (var x = 0; x < this.width; x++)
+        //     {
+        //             ret += ("" + displayGrid[y][x]);
+        //     }
+        //     ret += " ";
+        // }
+        return (displayGrid);
     }
     this.updateGame = () =>
     {
@@ -281,7 +283,7 @@ function Grid(player) {
 
 // for local debug 
 // var p = new Player();
-// // console.log(totalGames);
+// console.log(totalGames);
 // var g = new Grid(p);
 
 // getKeyPress(g, p);

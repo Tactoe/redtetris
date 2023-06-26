@@ -79,6 +79,8 @@ io.on("connection", (socket) => {
   //   socket.emit("startGame2", JSON.parse(`{"newGameId" : "` + gameId + `"}`));
   // });
   socket.on("keydown", (key) => {
+    if (!grid)
+      return;
     console.log(key);
         if(key == "q") grid.rotatePiece(-1);
         if(key == "e") grid.rotatePiece(1);
